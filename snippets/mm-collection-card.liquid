@@ -1,0 +1,31 @@
+{%- comment -%}
+  Renders one mega-menu promo card from a COLLECTION.
+  The image comes from the collection itself (Admin → Collections →
+  collection image); if that's empty it falls back to the collection's
+  first product image. Nothing here is set in the theme editor.
+
+  Params:
+    mm_collection - a collection object (from a collection menu link)
+    mm_captions   - boolean, show the title/button caption
+    mm_button     - button label text (may be blank)
+{%- endcomment -%}
+{%- assign col = mm_collection -%}
+{%- assign cimg = col.image -%}
+{%- if cimg == blank -%}
+  {%- assign cimg = col.products.first.featured_image -%}
+{%- endif -%}
+<a class="mm__card" href="{{ col.url }}">
+  <span class="mm__card-media">
+    {%- if cimg != blank -%}
+      <img src="{{ cimg | image_url: width: 800 }}" alt="{{ col.title | escape }}" loading="lazy" width="{{ cimg.width }}" height="{{ cimg.height }}">
+    {%- else -%}
+      {{ 'lifestyle-1' | placeholder_svg_tag: 'mm__card-ph' }}
+    {%- endif -%}
+  </span>
+  {%- if mm_captions -%}
+    <span class="mm__card-cap">
+      <span class="mm__card-t">{{ col.title }}</span>
+      {%- if mm_button != blank -%}<span class="mm__card-b">{{ mm_button }}</span>{%- endif -%}
+    </span>
+  {%- endif -%}
+</a>
