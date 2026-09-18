@@ -1,0 +1,23 @@
+{%- comment -%}
+  Soft 5-star rating with clean half-step fill.
+  Params: rating (0-5, clamped), size ('sm' | 'md' | 'lg').
+  Five separate wrappers; each = empty base + width-clipped fill.
+{%- endcomment -%}
+{%- liquid
+  assign _r = rating | default: 0 | times: 1.0
+  if _r < 0
+    assign _r = 0
+  endif
+  if _r > 5
+    assign _r = 5
+  endif
+  assign _sz = size | default: 'sm'
+-%}
+<span class="crc-stars crc-stars--{{ _sz }}" role="img" aria-label="{{ _r | round: 1 }} / 5 yıldız">
+  {%- for i in (1..5) -%}
+    {%- assign diff = _r | minus: i | plus: 1 -%}
+    {%- assign fp = 0 -%}
+    {%- if diff >= 1 -%}{%- assign fp = 100 -%}{%- elsif diff >= 0.5 -%}{%- assign fp = 50 -%}{%- endif -%}
+    <span class="crc-star"><svg class="crc-star__ic" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.7l2.4 4.86 5.36.78-3.88 3.78.92 5.34L10 14.16l-4.8 2.5.92-5.34L2.24 7.34l5.36-.78L10 1.7z"/></svg><span class="crc-star__fill" style="width: {{ fp }}%;"><svg class="crc-star__ic" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.7l2.4 4.86 5.36.78-3.88 3.78.92 5.34L10 14.16l-4.8 2.5.92-5.34L2.24 7.34l5.36-.78L10 1.7z"/></svg></span></span>
+  {%- endfor -%}
+</span>
