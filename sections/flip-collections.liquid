@@ -1,0 +1,364 @@
+{% comment %}
+  Flip collections — category cards that flip on hover (image front, title back).
+  Self-contained: no external JS/runtime. Pure CSS 3D transforms.
+  Each card is a block: pick a collection (title + link follow it) and upload an image.
+{% endcomment %}
+
+{% liquid
+  assign card_count = section.blocks.size
+  if card_count == 0
+    assign card_count = section.settings.columns
+  endif
+
+  # Flexible layout: columns follow the number of cards, capped at `max_per_row`.
+  assign row_columns = card_count | at_most: section.settings.columns
+
+  if section.settings.background_color != blank
+    render 'contrast-override', background_color: section.settings.background_color, section_id: section.id
+  endif
+%}
+
+<div
+  class="section-background{% if section.settings.background_color != blank %} color-custom-{{ section.id }}{% endif %}"
+></div>
+
+<div
+  class="
+    section
+    section--{{ section.settings.section_width }}
+    {% if section.settings.background_color != blank %}color-custom-{{ section.id }}{% endif %}
+    spacing-style
+  "
+  style="{% render 'spacing-style', settings: section.settings %}"
+  data-testid="flip-collections-{{ section.id }}"
+>
+  {% if section.settings.heading != blank %}
+    <div class="flip-collections__header">
+      <h2 class="flip-collections__title">{{ section.settings.heading }}</h2>
+    </div>
+  {% endif %}
+
+  <div
+    class="flip-collections__grid"
+    style="
+      --flip-columns: {{ row_columns }};
+      --flip-columns-mobile: {{ section.settings.mobile_columns }};
+      --flip-gap: {{ section.settings.gap }}px;
+      --flip-ratio: {{ section.settings.image_ratio }};
+      --flip-radius: {{ section.settings.corner_radius }}px;
+    "
+  >
+    {% for i in (1..card_count) limit: section.settings.columns_limit %}
+      {% liquid
+        assign block = section.blocks[forloop.index0]
+        assign collection = block.settings.collection
+        assign card_image = block.settings.image | default: collection.featured_image | default: collection.products.first.featured_image
+        assign card_title = block.settings.custom_title | default: collection.title | default: 'Collection'
+        assign card_url = collection.url | default: '#'
+        assign is_empty = false
+        if collection == blank and block.settings.image == blank
+          assign is_empty = true
+        endif
+      %}
+      <a
+        href="{{ card_url }}"
+        class="flip-card"
+        {{ block.shopify_attributes }}
+        {% if is_empty %}aria-hidden="true"{% endif %}
+      >
+        <div class="flip-card__inner">
+          <div class="flip-card__face flip-card__front">
+            {% if card_image %}
+              <img
+                class="flip-card__image"
+                src="{{ card_image | image_url: width: 800 }}"
+                srcset="
+                  {{ card_image | image_url: width: 400 }} 400w,
+                  {{ card_image | image_url: width: 600 }} 600w,
+                  {{ card_image | image_url: width: 800 }} 800w,
+                  {{ card_image | image_url: width: 1200 }} 1200w
+                "
+                sizes="(max-width: 749px) 50vw, {{ 100 | divided_by: row_columns }}vw"
+                alt="{{ card_image.alt | escape | default: card_title }}"
+                width="{{ card_image.width }}"
+                height="{{ card_image.height }}"
+                loading="lazy"
+              >
+            {% else %}
+              {{ 'collection-1' | placeholder_svg_tag: 'flip-card__image flip-card__placeholder' }}
+            {% endif %}
+          </div>
+          <div class="flip-card__face flip-card__back">
+            <span class="flip-card__title">{{ card_title }}</span>
+            <span class="flip-card__cta">{{ section.settings.cta_label }}</span>
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{% stylesheet %}
+  .flip-collections__header {
+    margin-block-end: var(--gap-2xl, 32px);
+  }
+
+  .flip-collections__title {
+    margin: 0;
+  }
+
+  .flip-collections__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--flip-columns), minmax(0, 1fr));
+    gap: var(--flip-gap);
+  }
+
+  @media screen and (max-width: 749px) {
+    .flip-collections__grid {
+      grid-template-columns: repeat(var(--flip-columns-mobile), minmax(0, 1fr));
+    }
+  }
+
+  .flip-card {
+    display: block;
+    perspective: 1200px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .flip-card__inner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--flip-ratio);
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    border-radius: var(--flip-radius);
+  }
+
+  .flip-card:hover .flip-card__inner,
+  .flip-card:focus-visible .flip-card__inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-card__face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--flip-radius);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .flip-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .flip-card__placeholder {
+    background: var(--color-foreground, #000);
+    opacity: 0.06;
+  }
+
+  .flip-card__back {
+    transform: rotateY(180deg);
+    flex-direction: column;
+    gap: var(--gap-xs, 8px);
+    text-align: center;
+    padding: var(--gap-lg, 24px);
+    background: var(--color-foreground, #000);
+    color: var(--color-background, #fff);
+  }
+
+  .flip-card__title {
+    font-family: var(--font-heading--family);
+    font-size: clamp(1.1rem, 2.4vw, 1.75rem);
+    line-height: 1.15;
+  }
+
+  .flip-card__cta {
+    font-family: var(--font-body--family);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flip-card__inner {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Flip collections",
+  "tag": "section",
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  },
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Collection card",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection",
+          "info": "The card title and link follow this collection."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image",
+          "info": "Shown on the front of the card. If empty, the collection's image is used."
+        },
+        {
+          "type": "text",
+          "id": "custom_title",
+          "label": "Custom title (optional)",
+          "info": "Overrides the collection name shown on the back."
+        }
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Find your perfect bag"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Card button text",
+      "default": "Shop now"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "columns",
+      "label": "Max cards per row (desktop)",
+      "info": "Cards auto-resize to fill the row. Fewer cards = bigger cards.",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "columns_limit",
+      "label": "Max cards shown",
+      "min": 2,
+      "max": 12,
+      "step": 1,
+      "default": 6
+    },
+    {
+      "type": "select",
+      "id": "mobile_columns",
+      "label": "Columns (mobile)",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Card shape",
+      "options": [
+        { "value": "0.8", "label": "Portrait" },
+        { "value": "1", "label": "Square" },
+        { "value": "1.4", "label": "Landscape" }
+      ],
+      "default": "0.8"
+    },
+    {
+      "type": "range",
+      "id": "gap",
+      "label": "Gap between cards",
+      "min": 0,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "label": "Corner radius",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Section width",
+      "options": [
+        { "value": "page-width", "label": "Page" },
+        { "value": "full-width", "label": "Full" }
+      ],
+      "default": "page-width"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "placeholder": "Default"
+    },
+    {
+      "type": "header",
+      "content": "Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top",
+      "min": 0,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom",
+      "min": 0,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 60
+    }
+  ],
+  "presets": [
+    {
+      "name": "Flip collections",
+      "blocks": [
+        { "type": "card" },
+        { "type": "card" },
+        { "type": "card" },
+        { "type": "card" },
+        { "type": "card" },
+        { "type": "card" }
+      ]
+    }
+  ]
+}
+{% endschema %}
