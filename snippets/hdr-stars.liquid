@@ -1,0 +1,24 @@
+{%- comment -%}
+  Handbag Diary — inline SVG star rating (own system, not shared with any
+  other section). Full / half / empty, 0–5 in 0.5 steps, five fixed
+  positions with width-clipped fill layer.
+  Params: rating (0–5), size ('sm' | 'md' | 'lg').
+{%- endcomment -%}
+{%- liquid
+  assign _r = rating | default: 0 | times: 1.0
+  if _r < 0
+    assign _r = 0
+  endif
+  if _r > 5
+    assign _r = 5
+  endif
+  assign _sz = size | default: 'md'
+-%}
+<span class="hdr-stars hdr-stars--{{ _sz }}" role="img" aria-label="{{ _r | round: 1 }} / 5">
+  {%- for i in (1..5) -%}
+    {%- assign diff = _r | minus: i | plus: 1 -%}
+    {%- assign fp = 0 -%}
+    {%- if diff >= 1 -%}{%- assign fp = 100 -%}{%- elsif diff >= 0.5 -%}{%- assign fp = 50 -%}{%- endif -%}
+    <span class="hdr-star"><svg class="hdr-star__ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.9 5.87 6.48.94-4.69 4.57 1.11 6.45L12 17.9l-5.79 3.04 1.1-6.45L2.63 9.41l6.47-.94L12 2.6z"/></svg><span class="hdr-star__fill" style="width:{{ fp }}%"><svg class="hdr-star__ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l2.9 5.87 6.48.94-4.69 4.57 1.11 6.45L12 17.9l-5.79 3.04 1.1-6.45L2.63 9.41l6.47-.94L12 2.6z"/></svg></span></span>
+  {%- endfor -%}
+</span>
